@@ -91,6 +91,7 @@ def test_create_and_remove_desktop():
 
     time.sleep(1) # Got to wait for the animation before we can return
     current_desktop.go()
+    current_window.set_focus()
 
 
 @pytest.mark.xfail(
