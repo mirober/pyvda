@@ -9,8 +9,6 @@ References:
         * http://grabacr.net/archives/5601
         * https://www.cyberforum.ru/blogs/105416/blog3671.html
 """
-import os
-import sys
 from ctypes import HRESULT, POINTER, c_ulonglong
 from ctypes.wintypes import (
     BOOL,
@@ -205,7 +203,6 @@ class IVirtualDesktopManagerInternal(IUnknown):
             COMMETHOD([], HRESULT, "SetWallpaperForAllDesktops", (["in"], HSTRING, "path")),
             COMMETHOD([], HRESULT, "CopyDesktopState", (["in"], POINTER(IApplicationView), "pView0"), (["in"], POINTER(IApplicationView), "pView0")),
             COMMETHOD([], HRESULT, "CreateRemoteDesktop", (["in"], HSTRING, "a1"), (["out"], POINTER(POINTER(IVirtualDesktop)), "out")),
-            STDMETHOD(HRESULT, "pDesktop", (POINTER(IVirtualDesktop),)),
             STDMETHOD(HRESULT, "SwitchRemoteDesktop", (POINTER(IVirtualDesktop), UINT)),
             STDMETHOD(HRESULT, "SwitchDesktopWithAnimation", (POINTER(IVirtualDesktop),)),
             COMMETHOD([], HRESULT, "GetLastActiveDesktop", (["out"], POINTER(POINTER(IVirtualDesktop)), "pDesktop"),),
@@ -230,7 +227,6 @@ class IVirtualDesktopManagerInternal(IUnknown):
             COMMETHOD([], HRESULT, "SetWallpaperForAllDesktops", (["in"], HSTRING, "path")),
             COMMETHOD([], HRESULT, "CopyDesktopState", (["in"], POINTER(IApplicationView), "pView0"), (["in"], POINTER(IApplicationView), "pView0")),
             COMMETHOD([], HRESULT, "CreateRemoteDesktop", (["in"], HSTRING, "a1"), (["out"], POINTER(POINTER(IVirtualDesktop)), "out")),
-            STDMETHOD(HRESULT, "pDesktop", (POINTER(IVirtualDesktop),)),
             STDMETHOD(HRESULT, "SwitchRemoteDesktop", (POINTER(IVirtualDesktop), UINT)),
             STDMETHOD(HRESULT, "SwitchDesktopWithAnimation", (POINTER(IVirtualDesktop),)),
             COMMETHOD([], HRESULT, "GetLastActiveDesktop", (["out"], POINTER(POINTER(IVirtualDesktop)), "pDesktop"),),
@@ -360,6 +356,18 @@ class IVirtualDesktopManagerInternal(IUnknown):
             return self.SwitchDesktop(0, target) # type: ignore
         else:
             return self.SwitchDesktop(target) # type: ignore
+
+    def switch_desktop_with_animation(self, target: IVirtualDesktop):
+        """Switch to a virtual desktop with animation.
+        
+        Only available on Windows 11 builds 22631 and later.
+        """
+        if build.OVER_22631:
+            return self.SwitchDesktopWithAnimation(target) # type: ignore
+        else:
+            raise NotImplementedError(
+                "SwitchDesktopWithAnimation is only available on Windows 11 build 22631 and later"
+            )
 
 
 GUID_IVirtualDesktopManagerInternal2 = GUID("{0F3A72B0-4566-487E-9A33-4ED302F6D6CE}")
