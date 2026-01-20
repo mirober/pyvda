@@ -40,7 +40,7 @@ class AppView():
         elif view:
             self._view = view
         else:
-            raise Exception(f"Must pass 'hwnd' or 'view'")
+            raise Exception("Must pass 'hwnd' or 'view'")
 
     def __eq__(self, other):
         return self.hwnd == other.hwnd
@@ -385,18 +385,22 @@ class VirtualDesktop():
             fallback = VirtualDesktop(1)
         managers.manager_internal.RemoveDesktop(self._virtual_desktop, fallback._virtual_desktop) # type: ignore
 
-    def go(self, allow_set_foreground: bool = True):
+    def go(self, allow_set_foreground: bool = True, animation: bool = False):
         """Switch to this virtual desktop.
 
         Args:
             allow_set_foreground (bool, optional): Call AllowSetForegroundWindow(ASFW_ANY) before switching. This partially fixes an issue where the focus remains behind after switching. Defaults to True.
+            animation (bool, optional): Use the Windows desktop switching animation. Only available on Windows 11 build 22631 and later. Defaults to False.
 
         Note:
             More details at https://github.com/Ciantic/VirtualDesktopAccessor/issues/4 and https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-allowsetforegroundwindow.
         """
         if allow_set_foreground:
             windll.user32.AllowSetForegroundWindow(ASFW_ANY)
-        managers.manager_internal.switch_desktop(self._virtual_desktop) # type: ignore
+        if animation:
+            managers.manager_internal.switch_desktop_with_animation(self._virtual_desktop) # type: ignore
+        else:
+            managers.manager_internal.switch_desktop(self._virtual_desktop) # type: ignore
 
     def apps_by_z_order(self, include_pinned: bool = True) -> List[AppView]:
         """Get a list of AppViews, ordered by their Z position, with
