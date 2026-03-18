@@ -62,3 +62,4 @@ from .pyvda import (
     get_virtual_desktops,
     set_wallpaper_for_all_desktops,
 )
+from .notification import VirtualDesktopNotificationService
