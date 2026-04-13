@@ -379,10 +379,10 @@ class VirtualDesktop():
         Args:
             fallback (VirtualDesktop, optional): If you are currently on the desktop
             you pass to this method, focus will be shifted to the desktop passed here.
-            If no desktop is passed, it will default to the first.
+            If no desktop is passed, it will default to a different desktop.
         """
         if fallback is None:
-            fallback = VirtualDesktop(1)
+            fallback = VirtualDesktop(2 if self.number == 1 else 1)
         managers.manager_internal.RemoveDesktop(self._virtual_desktop, fallback._virtual_desktop) # type: ignore
 
     def go(self, allow_set_foreground: bool = True):

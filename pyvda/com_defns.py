@@ -9,8 +9,6 @@ References:
         * http://grabacr.net/archives/5601
         * https://www.cyberforum.ru/blogs/105416/blog3671.html
 """
-import os
-import sys
 from ctypes import HRESULT, POINTER, c_ulonglong
 from ctypes.wintypes import (
     BOOL,
@@ -437,3 +435,104 @@ class IApplicationViewCollection(IUnknown):
         # STDMETHOD(HRESULT, "RegisterForApplicationViewPositionChanges", (POINTER(IApplicationViewChangeListener), POINTER(DWORD),)),
         STDMETHOD(HRESULT, "UnregisterForApplicationViewChanges", (DWORD,)),
     ]
+
+
+#  IVirtualDesktopNotificationService - stable across all builds
+class IVirtualDesktopNotificationService(IUnknown):
+    _iid_ = const.GUID_IVirtualDesktopNotificationService
+    _methods_ = [
+        COMMETHOD(
+            [],
+            HRESULT,
+            "Register",
+            (["in"], LPVOID, "pNotification"),
+            (["out"], POINTER(DWORD), "pdwCookie"),
+        ),
+        COMMETHOD([], HRESULT, "Unregister", (["in"], DWORD, "dwCookie")),
+    ]
+
+
+
+#  IVirtualDesktopNotification - build-dependent GUID and vtable
+# All parameters use LPVOID because callers should use pyvda's public API
+# (VirtualDesktop, AppView) to query state, not unwrap raw COM pointers.
+
+def _make_notification_iface(guid, methods_spec):
+    """Create an IVirtualDesktopNotification comtypes interface class.
+
+    Parameters
+    ----------
+    guid : GUID
+        The COM interface GUID for the current Windows build.
+    methods_spec : list[tuple[str, int]]
+        Each entry is (method_name, param_count).  Parameters are declared
+        as ``c_void_p`` since we don't inspect them.
+    """
+    from ctypes import c_void_p
+    methods = []
+    for name, params in methods_spec:
+        param_defs = [(["in"], c_void_p, f"p{i}") for i in range(params)]
+        methods.append(COMMETHOD([], HRESULT, name, *param_defs))
+
+    ns = {
+        "_iid_": guid,
+        "_methods_": methods,
+    }
+    return type("IVirtualDesktopNotification", (IUnknown,), ns)
+
+
+_NOTIFICATION_METHODS_WIN10 = [
+    ("VirtualDesktopCreated", 1),
+    ("VirtualDesktopDestroyBegin", 2),
+    ("VirtualDesktopDestroyFailed", 2),
+    ("VirtualDesktopDestroyed", 2),
+    ("ViewVirtualDesktopChanged", 1),
+    ("CurrentVirtualDesktopChanged", 2),
+]
+
+_NOTIFICATION_METHODS_21H2 = [
+    ("VirtualDesktopCreated", 2),
+    ("VirtualDesktopDestroyBegin", 3),
+    ("VirtualDesktopDestroyFailed", 3),
+    ("VirtualDesktopDestroyed", 3),
+    ("Proc7", 1),
+    ("VirtualDesktopMoved", 4),
+    ("VirtualDesktopRenamed", 2),
+    ("ViewVirtualDesktopChanged", 1),
+    ("CurrentVirtualDesktopChanged", 3),
+    ("VirtualDesktopWallpaperChanged", 2),
+]
+
+_NOTIFICATION_METHODS_23H2 = [
+    ("VirtualDesktopCreated", 1),
+    ("VirtualDesktopDestroyBegin", 2),
+    ("VirtualDesktopDestroyFailed", 2),
+    ("VirtualDesktopDestroyed", 2),
+    ("VirtualDesktopMoved", 3),
+    ("VirtualDesktopRenamed", 2),
+    ("ViewVirtualDesktopChanged", 1),
+    ("CurrentVirtualDesktopChanged", 2),
+    ("VirtualDesktopWallpaperChanged", 2),
+    ("VirtualDesktopSwitched", 1),
+    ("RemoteVirtualDesktopConnected", 1),
+]
+
+_NOTIFICATION_METHODS_24H2 = _NOTIFICATION_METHODS_23H2
+
+
+if build.OVER_22631:
+    GUID_IVirtualDesktopNotification = const.GUID_IVirtualDesktopNotification_22631
+    _NOTIFICATION_METHODS = _NOTIFICATION_METHODS_24H2
+elif build.OVER_22621:
+    GUID_IVirtualDesktopNotification = const.GUID_IVirtualDesktopNotification_22621
+    _NOTIFICATION_METHODS = _NOTIFICATION_METHODS_23H2
+elif build.OVER_20231:
+    GUID_IVirtualDesktopNotification = const.GUID_IVirtualDesktopNotification_20231
+    _NOTIFICATION_METHODS = _NOTIFICATION_METHODS_21H2
+else:
+    GUID_IVirtualDesktopNotification = const.GUID_IVirtualDesktopNotification_9000
+    _NOTIFICATION_METHODS = _NOTIFICATION_METHODS_WIN10
+
+IVirtualDesktopNotification = _make_notification_iface(
+    GUID_IVirtualDesktopNotification, _NOTIFICATION_METHODS
+)
