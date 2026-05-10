@@ -17,6 +17,12 @@ from pyvda.com_defns import (
     IVirtualDesktopManagerInternal2,
     IVirtualDesktopPinnedApps,
 )
+from pyvda.const import (
+    RPC_E_DISCONNECTED,
+    RPC_E_DISCONNECTED_U,
+    RPC_S_SERVER_UNAVAILABLE,
+    RPC_S_SERVER_UNAVAILABLE_U,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +39,14 @@ def _get_object(cls, clsid = None):
             pObject,
         )
     except _ctypes.COMError as e:
+        if e.args and e.args[0] in (
+            RPC_S_SERVER_UNAVAILABLE,
+            RPC_E_DISCONNECTED,
+            RPC_S_SERVER_UNAVAILABLE_U,
+            RPC_E_DISCONNECTED_U,
+        ):
+            raise
+
         winver = sys.getwindowsversion()
         platver = sys.getwindowsversion().platform_version
         raise NotImplementedError(
@@ -71,4 +85,7 @@ class Managers(threading.local):
             # This is likely because COM has already been initialised with
             # COINIT_MULTITHREADED, whereas CoInitialize uses COINIT_APARTMENTTHREADED.
             # This should not be a problem for us, so warn and keep going.
-            logger.warning("Failed to initialise COM: %s", str(e))
+            if getattr(e, "winerror", None) == -2147417850:
+                logger.debug("COM already initialized with a different thread mode.")
+            else:
+                logger.warning("Failed to initialise COM: %s", str(e))
